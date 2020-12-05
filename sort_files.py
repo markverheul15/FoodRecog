@@ -12,6 +12,11 @@ import time
 
 df = pd.read_csv('train_labels.csv', header=0)
 
+df['label'] = df['label'].astype(int)
+df['label'] = df['label'] + 100
+
+# df['label'] = df['label'].astype(str)
+
 fileDir = os.path.dirname(os.path.realpath('__file__'))
 
 def move_files(mylist, listtype, label):
@@ -22,12 +27,13 @@ def move_files(mylist, listtype, label):
         if not os.path.exists(f'{fileDir}/{listtype}/class{label}'):
             os.makedirs(f'{fileDir}/{listtype}/class{label}')
             time.sleep(1)
-        shutil.move(f'{fileDir}/Data/train_set/train_set/{x}', f'{fileDir}/{listtype}/class{label}/{x}')
+        shutil.move(f'{fileDir}/train_set/train_set/{x}', f'{fileDir}/{listtype}/class{label}/{x}')
         # shutil.move(f'/home/hulu/Desktop/AML_FR/Test/{x}', f'/home/hulu/Desktop/AML_FR/{listtype}/class{label}/{x}')
 
 # for i in range(100):
-for i in range(100):
+for i in range(200):
     file_list = []
+    print(i)
     file_list = df.loc[df['label'] == i, 'img_name'].to_list()
     file_list.sort()
     lengte = len(file_list)

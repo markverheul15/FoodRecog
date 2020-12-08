@@ -33,8 +33,8 @@ traindir = datadir + '/train/'
 validdir = datadir + '/validate/'
 testdir = datadir + '/test/'
 
-save_file_name = 'vgg16-transfer-4.pt'
-checkpoint_path = 'vgg16-transfer-4.pth'
+save_file_name = 'resnet50-save.pt'
+checkpoint_path = 'resnet50-checkpoint.pth'
 
 # Change to fit hardware
 batch_size = 50
@@ -141,8 +141,8 @@ data = {
 
 # Dataloader iterators, make sure to shuffle
 dataloaders = {
-    'train': DataLoader(data['train'], batch_size=batch_size, shuffle=True),
-    'val': DataLoader(data['valid'], batch_size=batch_size, shuffle=True)
+    'train': DataLoader(data['train'], batch_size=batch_size, shuffle=False),
+    'val': DataLoader(data['valid'], batch_size=batch_size, shuffle=False)
 }
 # Iterate through the dataloader once
 trainiter = iter(dataloaders['train'])
@@ -544,13 +544,14 @@ def save_checkpoint(model, path):
 
     # Extract the final classifier and the state dictionary
     if model_name == 'vgg16':
+        pass
         # Check to see if model was parallelized
-        if multi_gpu:
-            checkpoint['classifier'] = model.module.classifier
-            checkpoint['state_dict'] = model.module.state_dict()
-        else:
-            checkpoint['classifier'] = model.classifier
-            checkpoint['state_dict'] = model.state_dict()
+        # if multi_gpu:
+            # checkpoint['classifier'] = model.module.classifier
+            # checkpoint['state_dict'] = model.module.state_dict()
+        # else:
+        #     checkpoint['classifier'] = model.classifier
+        #     checkpoint['state_dict'] = model.state_dict()
 
     elif model_name == 'resnet50':
         if multi_gpu:

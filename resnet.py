@@ -107,20 +107,21 @@ print(cat_df.tail())
 
 # Image transformations
 
-# 'train': transforms.Compose([
-#     transforms.RandomResizedCrop(input_size),
-#     transforms.RandomHorizontalFlip(),
-#     transforms.ToTensor(),
-#     transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
-# ]),
+
 image_transforms = {
-    'train':
-    transforms.Compose([
-        transforms.Resize(size=256),
-        transforms.CenterCrop(size=224),  # Image net standards
+    'train': transforms.Compose([
+        transforms.RandomResizedCrop(size=224),
+        transforms.RandomHorizontalFlip(),
         transforms.ToTensor(),
-        transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])  # Imagenet standards
+        transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
     ]),
+    # 'train':
+    # transforms.Compose([
+    #     transforms.Resize(size=256),
+    #     transforms.CenterCrop(size=224),  # Image net standards
+    #     transforms.ToTensor(),
+    #     transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])  # Imagenet standards
+    # ]),
     # Validation does not use augmentation
     'valid':
     transforms.Compose([
@@ -141,8 +142,8 @@ data = {
 
 # Dataloader iterators, make sure to shuffle
 dataloaders = {
-    'train': DataLoader(data['train'], batch_size=batch_size, shuffle=False),
-    'val': DataLoader(data['valid'], batch_size=batch_size, shuffle=False)
+    'train': DataLoader(data['train'], batch_size=batch_size, shuffle=True),
+    'val': DataLoader(data['valid'], batch_size=batch_size, shuffle=True)
 }
 # Iterate through the dataloader once
 trainiter = iter(dataloaders['train'])
@@ -295,6 +296,11 @@ print(list(model.idx_to_class.items())[:10])
 
 criterion = nn.NLLLoss()
 optimizer = optim.Adam(model.parameters())
+for param_group in optimizer.param_groups:
+    print(param_group['lr'])
+lr = 0.001
+# criterion = nn.NLLLoss().to(device='cuda')
+optimizer = optim.Adam(model.parameters(), lr)
 
 for p in optimizer.param_groups[0]['params']:
     if p.requires_grad:

@@ -196,21 +196,24 @@ def image_loader(image_name):
     image = image.unsqueeze(0)  #this is for VGG, may not be needed for ResNet
     return image.cuda()  #assumes that you're using GPU
 
-model.eval()
-
 result_df = pd.DataFrame(columns=['img_name', 'label'])
-sm = torch.nn.Softmax()
-max = 0
-for filename in os.listdir(testdir):
-    # if max == 50:
-    #     break
-    max +=1
-    image = image_loader(f'{testdir}/{filename}')
-    label = torch.argmin((model(image))).item()
-    label = int(label)
-    label +=1
-    # print(label)
-    result_df = result_df.append({'img_name': filename, 'label': label}, ignore_index=True)
+
+with torch.no_grad():
+    model.eval()
+
+    sm = torch.nn.Softmax()
+    max = 0
+    for filename in os.listdir(testdir):
+        # if max == 50:
+        #     break
+        max +=1
+        image = image_loader(f'{testdir}/{filename}')
+
+        label = torch.argmin((model(image))).item()
+        label = int(label)
+        label +=1
+        # print(label)
+        result_df = result_df.append({'img_name': filename, 'label': label}, ignore_index=True)
 
 # print(len(image_names))
 inbetween_df = pd.DataFrame(result_df.img_name.str.split('_',1).tolist(),

@@ -33,7 +33,7 @@ print(fileDir)
 datadir = fileDir
 traindir = datadir + '/train/'
 validdir = datadir + '/validate/'
-testdir = datadir + '/testest/'
+testdir = datadir + '/test/'
 
 save_file_name = 'vgg16-transfer-4.pt'
 checkpoint_path = 'vgg16-transfer-4.pth'
@@ -206,7 +206,9 @@ for filename in os.listdir(testdir):
     #     break
     max +=1
     image = image_loader(f'{testdir}/{filename}')
-    label = torch.argmin((model(image))).item()
+    label = torch.argmax((model(image))).item()
+    correct_tensor = pred.eq(target.data.view_as(pred))
+
     label = int(label)
     label +=1
     # print(label)

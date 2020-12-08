@@ -65,7 +65,7 @@ ws = []
 # Iterate through each category
 for d in os.listdir(traindir):
     categories.append(d)
-
+    print(d)
     # Number of each image
     train_imgs = os.listdir(traindir + d)
     valid_imgs = os.listdir(validdir + d)
@@ -108,7 +108,7 @@ print(cat_df.tail())
 image_transforms = {
     # Train uses data augmentation
     'train':
-    transforms.Compose([
+        transforms.Compose([
         transforms.Resize(size=256),
         transforms.CenterCrop(size=224),  # Image net standards
         transforms.ToTensor(),
@@ -147,51 +147,51 @@ print(f'There are {n_classes} different classes.')
 print(len(data['train'].classes))
 
 
-def get_pretrained_model(model_name):
-    """Retrieve a pre-trained model from torchvision
 
-    Params
-    -------
-        model_name (str): name of the model (currently only accepts vgg16 and resnet50)
 
-    Return
-    --------
-        model (PyTorch model): cnn
+class MyVgg (nn.Module):
 
-    """
+    def __init__(self):
+        super(MyVgg, self).__init__()
 
-    if model_name == 'vgg16':
-        model = models.vgg16(pretrained=True)
-
-        # Freeze early layers
-        for param in model.parameters():
+        vgg = models.vgg16_bn(pretrained=True)
+        for param in vgg.parameters():
+            # print(param)
             param.requires_grad = False
-        n_inputs = model.classifier[6].in_features
+        n_inputs = vgg.classifier[6].in_features
         print(n_inputs)
         # Add on classifier
-        model.classifier[6] = nn.Sequential(
-            nn.Linear(n_inputs, 256), nn.ReLU(), nn.Dropout(0.2),
-            nn.Linear(256, n_classes), nn.LogSoftmax(dim=1))
+        vgg.classifier[6] = nn.Sequential(
+            nn.Linear(n_inputs, 1080), nn.ReLU()
+            # ,
+            # nn.Dropout(0.2),
+            # nn.Linear(256, n_classes), nn.LogSoftmax(dim=1)
+        )
 
-    elif model_name == 'resnet50':
-        model = models.resnet50(pretrained=True)
+        # Here you get the bottleneck/feature extractor
+        self.vgg_feature_extractor = nn.Sequential(*list(vgg.children())[:-1])
 
-        for param in model.parameters():
-            param.requires_grad = False
+        # Now you can include your classifiers
+        # self.classifier1 = nn.Sequential(nn.Linear(25088, 540), nn.ReLU(), nn.Dropout(0.5))
+        # self.classifier2 = nn.Sequential(nn.Linear(540, n_classes), nn.ReLU(), nn.LogSoftmax(dim=1))
 
-        n_inputs = model.fc.in_features
-        model.fc = nn.Sequential(
-            nn.Linear(n_inputs, 256), nn.ReLU(), nn.Dropout(0.2),
-            nn.Linear(256, n_classes), nn.LogSoftmax(dim=1))
+        self.classifier1 = nn.Sequential( nn.Conv2d(512, 512, 7))
+        self.classifier2 = nn.Sequential( nn.Linear(25088, 540), nn.ReLU(), nn.Dropout(0.5))
+        self.classifier3 = nn.Sequential(nn.Linear(540, n_classes), nn.ReLU(), nn.LogSoftmax(dim=1))
 
-    # Move to gpu and parallelize
-    if train_on_gpu:
-        model = model.to('cuda')
+    # Set your own forward pass
+    def forward(self, img, extra_info=None):
 
-    if multi_gpu:
-        model = nn.DataParallel(model)
-
-    return model
+        x = self.vgg_feature_extractor(img)
+        # x = x_input.reshape((x_input.shape[0], x_input.shape[1] * x_input.shape[2] * x_input.shape[3]))
+        # print(x.size())
+        # x = x.view(x.size(0), -1)
+        # print(x.size())
+        x = self.classifier1(x)
+        print(x.size())
+        x = self.classifier2(x)
+        x = self.classifier3(x)
+        return x
 
 def load_checkpoint(path):
     """Load a PyTorch model checkpoint
@@ -257,41 +257,54 @@ def load_checkpoint(path):
 
 # model, optimizer = load_checkpoint(path=checkpoint_path)
 
-model = get_pretrained_model('vgg16')
+# model = get_pretrained_model('vgg16')
+model = MyVgg()
+model.cuda()
+
 print(model)
 if multi_gpu:
+    print('deze?')
     summary(
         model.module,
         input_size=(3, 224, 224),
         batch_size=batch_size,
         device='cuda')
 else:
+    print('nope')
     summary(
         model, input_size=(3, 224, 224), batch_size=batch_size, device='cuda')
-if multi_gpu:
-    print(model.module.classifier[6])
-else:
-    print(model.classifier[6])
+# if multi_gpu:
+#     print(model.module.classifier[6])
+# else:
+#     print(model.classifier[6])
 
 model.class_to_idx = data['train'].class_to_idx
+
 model.idx_to_class = {
     idx: class_
     for class_, idx in model.class_to_idx.items()
+        # .to(device='cuda')
 }
 
 print(list(model.idx_to_class.items())[:10])
 
 
-
 ''' TRAINING LOSS AND OPTIMIZER'''
 
-
-criterion = nn.NLLLoss()
-optimizer = optim.Adam(model.parameters())
+lr = 0.01
+criterion = nn.NLLLoss().to(device='cuda')
+optimizer = optim.Adam(model.parameters(), lr)
 
 for p in optimizer.param_groups[0]['params']:
     if p.requires_grad:
-        print(p.shape)
+        print('joe', p.shape)
+
+
+def adjust_learning_rate(optimizer, epoch, lr):
+    """Sets the learning rate to the initial LR decayed by 10 every 30 epochs"""
+    lr = lr * (0.1 ** (epoch // 30))
+    for param_group in optimizer.param_groups:
+        param_group['lr'] = lr
 
 def train(model,
           criterion,
@@ -300,7 +313,7 @@ def train(model,
           valid_loader,
           save_file_name,
           max_epochs_stop=3,
-          n_epochs=20,
+          n_epochs=40,
           print_every=1):
     """Train a PyTorch Model
 
@@ -341,6 +354,7 @@ def train(model,
     # Main loop
     for epoch in range(n_epochs):
 
+        adjust_learning_rate(optimizer, epoch, lr)
         # keep track of training and validation loss each epoch
         train_loss = 0.0
         valid_loss = 0.0
@@ -357,8 +371,7 @@ def train(model,
             # Tensors to gpu
             if train_on_gpu:
                 data, target = data.cuda(), target.cuda()
-
-            # Clear gradients
+                # Clear gradients
             optimizer.zero_grad()
             # Predicted outputs are log probabilities
             output = model(data)
@@ -489,6 +502,7 @@ def train(model,
         columns=['train_loss', 'valid_loss', 'train_acc', 'valid_acc'])
     return model, history
 
+print('going for training yo')
 model, history = train(
     model,
     criterion,

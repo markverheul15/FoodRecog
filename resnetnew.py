@@ -1,35 +1,8 @@
-
-import seaborn as sns
-# PyTorch
-from torchvision import transforms, datasets, models
-import torch
-from torch import optim, cuda
-from torch.utils.data import DataLoader, sampler
-import torch.nn as nn
-
-import warnings
-warnings.filterwarnings('ignore', category=FutureWarning)
-
-# Data science tools
-import numpy as np
-import pandas as pd
-import os
-
-# Image manipulations
-from PIL import Image
-# Useful for examining network
-from torchsummary import summary
-# Timing utility
-from timeit import default_timer as timer
-
-# Visualizations
-import matplotlib.pyplot as plt
-plt.rcParams['font.size'] = 14
-
 # Location of data
-fileDir = os.path.dirname(os.path.realpath('__file__'))
+fileDir = '/kaggle/input/foodrecog'
 
 datadir = fileDir
+print(datadir)
 traindir = datadir + '/train/'
 validdir = datadir + '/validate/'
 testdir = datadir + '/test/'
@@ -72,7 +45,7 @@ ws = []
 # Iterate through each category
 for d in os.listdir(traindir):
     categories.append(d)
-    print(d)
+#     print(d)
 
     # Number of each image
     train_imgs = os.listdir(traindir + d)
@@ -331,7 +304,7 @@ def load_checkpoint(path):
 # model, optimizer = load_checkpoint(path=checkpoint_path)
 
 model = get_pretrained_model('resnet50')
-model = MyVgg()
+model = MyResnet()
 model.cuda()
 
 print(model)
@@ -346,17 +319,17 @@ else:
     print('nope')
     summary(
         model, input_size=(3, 224, 224), batch_size=batch_size, device='cuda')
-model = get_pretrained_model('resnet50')
-print(model)
-if multi_gpu:
-    summary(
-        model.module,
-        input_size=(3, 224, 224),
-        batch_size=batch_size,
-        device='cuda')
-else:
-    summary(
-        model, input_size=(3, 224, 224), batch_size=batch_size, device='cuda')
+# model = get_pretrained_model('resnet50')
+# print(model)
+# if multi_gpu:
+#     summary(
+#         model.module,
+#         input_size=(3, 224, 224),
+#         batch_size=batch_size,
+#         device='cuda')
+# else:
+#     summary(
+#         model, input_size=(3, 224, 224), batch_size=batch_size, device='cuda')
 # if multi_gpu:
 #     print(model.module.classifier[6])
 # else:
